@@ -1,3 +1,5 @@
+const { minioClient, BUCKET_NAME } = require('../services/minio');
+const fs = require('fs');
 const pool = require('../services/db');
 const redisClient = require('../services/redis');
 
@@ -30,12 +32,25 @@ exports.createReport = async (req, res) => {
 
     // insert foto
     for (const file of req.files) {
+      const filePath = file.path;
+      const objectName = `${Date.now()}-${file.originalname}`;
+
+      await minioClient.fPutObject(
+        BUCKET_NAME,
+        objectName,
+        filePath
+      );
+
       await client.query(
         `INSERT INTO report_photos (report_id, photo_url)
-         VALUES ($1, $2)`,
-        [reportId, file.filename]
+        VALUES ($1, $2)`,
+        [reportId, objectName]
       );
+
+      // hapus file lokal setelah sukses upload
+      fs.unlinkSync(filePath);
     }
+
 
     await client.query('COMMIT');
 
