@@ -1,9 +1,17 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const upload = require('../middlewares/upload');
-const controller = require('../controllers/reportController');
+const { upload, handleMulterError } = require("../middlewares/upload");
+const controller = require("../controllers/reportController");
 
-router.post('/', upload.array('photos', 4), controller.createReport);
-router.get('/', controller.getReports);
+// POST /reports with error handling
+router.post(
+  "/",
+  upload.array("photos", 4),
+  handleMulterError,
+  controller.createReport,
+);
+
+// GET /reports
+router.get("/", controller.getReports);
 
 module.exports = router;
