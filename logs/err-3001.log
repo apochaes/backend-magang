@@ -1,0 +1,73 @@
+2026-02-11 07:26:06 +00:00: PostgreSQL connection error: connect EHOSTUNREACH 10.10.11.129:6432
+2026-02-11 07:26:06 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:15 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:18 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:21 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:24 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:27 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:30 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:33 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:36 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:39 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:42 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:45 +00:00: Redis: Too many reconnection attempts, giving up
+2026-02-11 07:26:45 +00:00: Redis error (PID: 1307): connect EHOSTUNREACH 10.10.11.129:6379
+2026-02-11 07:26:45 +00:00: Failed to connect to Redis: Redis reconnection failed
+2026-02-11 07:27:42 +00:00: ClientClosedError: The client is closed
+2026-02-11 07:27:42 +00:00:     at RedisSocket.quit (/root/projects/backend-magang/node_modules/@redis/client/dist/lib/client/socket.js:264:19)
+2026-02-11 07:27:42 +00:00:     at Class.QUIT (/root/projects/backend-magang/node_modules/@redis/client/dist/lib/client/index.js:895:35)
+2026-02-11 07:27:42 +00:00:     at process.<anonymous> (/root/projects/backend-magang/src/services/redis.js:75:21)
+2026-02-11 07:27:42 +00:00:     at process.emit (node:events:536:35)
+2026-02-11 07:37:52 +00:00: Create report error: Cannot destructure property 'title' of 'req.body' as it is undefined.
+2026-02-11 08:06:45 +00:00: Failed to insert photo record for 1770797195897-1503-582128572-Ai.jpg: Query read timeout
+2026-02-11 08:06:51 +00:00: Create report error: Query read timeout
+2026-02-11 08:06:54 +00:00: Create report error: Query read timeout
+2026-02-11 08:06:56 +00:00: Error: Operation timeout
+2026-02-11 08:06:56 +00:00:     at Timeout._onTimeout (/root/projects/backend-magang/src/controllers/reportController.js:25:13)
+2026-02-11 08:06:56 +00:00:     at listOnTimeout (node:internal/timers:581:17)
+2026-02-11 08:06:56 +00:00:     at process.processTimers (node:internal/timers:519:7)
+2026-02-11 08:12:54 +00:00: Failed to insert photo record for 1770797564627-1750-405780335-Ai.jpg: Query read timeout
+2026-02-11 08:13:02 +00:00: Create report error: Query read timeout
+2026-02-11 08:13:07 +00:00: Error: Operation timeout
+2026-02-11 08:13:07 +00:00:     at Timeout._onTimeout (/root/projects/backend-magang/src/controllers/reportController.js:25:13)
+2026-02-11 08:13:07 +00:00:     at listOnTimeout (node:internal/timers:581:17)
+2026-02-11 08:13:07 +00:00:     at process.processTimers (node:internal/timers:519:7)
+2026-02-11 08:14:59 +00:00: Failed to insert photo record for 1770797689419-1784-1105820-Ai.jpg: Query read timeout
+2026-02-11 08:14:59 +00:00: Failed to insert photo record for 1770797689419-1784-566288736-Ai.jpg: Query read timeout
+2026-02-11 08:14:59 +00:00: Failed to insert photo record for 1770797689419-1784-853634856-Ai.jpg: Query read timeout
+2026-02-11 08:15:03 +00:00: Failed to insert photo record for 1770797693615-1784-821038416-Ai.jpg: Query read timeout
+2026-02-11 08:15:03 +00:00: Failed to insert photo record for 1770797693615-1784-873861818-Ai.jpg: Query read timeout
+2026-02-11 08:15:03 +00:00: Failed to insert photo record for 1770797693615-1784-867549279-Ai.jpg: Query read timeout
+2026-02-11 08:15:04 +00:00: Failed to insert photo record for 1770797694693-1784-304516160-Ai.jpg: Query read timeout
+2026-02-11 08:15:04 +00:00: Failed to insert photo record for 1770797694693-1784-663571087-Ai.jpg: Query read timeout
+2026-02-11 08:15:04 +00:00: Failed to insert photo record for 1770797694693-1784-370135384-Ai.jpg: Query read timeout
+2026-02-11 08:15:05 +00:00: Failed to insert photo record for 1770797695388-1784-677923097-Ai.jpg: Query read timeout
+2026-02-11 08:15:05 +00:00: Failed to insert photo record for 1770797695388-1784-540119200-Ai.jpg: Query read timeout
+2026-02-11 08:15:05 +00:00: Failed to insert photo record for 1770797695388-1784-231895915-Ai.jpg: Query read timeout
+2026-02-11 08:15:12 +00:00: Create report error: Query read timeout
+2026-02-11 08:15:17 +00:00: Error: Operation timeout
+2026-02-11 08:15:17 +00:00:     at Timeout._onTimeout (/root/projects/backend-magang/src/controllers/reportController.js:25:13)
+2026-02-11 08:15:17 +00:00:     at listOnTimeout (node:internal/timers:581:17)
+2026-02-11 08:15:17 +00:00:     at process.processTimers (node:internal/timers:519:7)
+2026-02-11 08:46:20 +00:00: Failed to insert photo record for 1770799570265-1887-885578341-Ai.jpg: Query read timeout
+2026-02-11 08:46:24 +00:00: Failed to insert photo record for 1770799574464-1887-4963639-Ai.jpg: Query read timeout
+2026-02-11 08:46:24 +00:00: Failed to insert photo record for 1770799574464-1887-367366711-Ai.jpg: Query read timeout
+2026-02-11 08:46:24 +00:00: Failed to insert photo record for 1770799574464-1887-352914751-Ai.jpg: Query read timeout
+2026-02-11 08:46:28 +00:00: Create report error: Query read timeout
+2026-02-11 08:46:32 +00:00: Create report error: Query read timeout
+2026-02-11 08:46:33 +00:00: Error: Operation timeout
+2026-02-11 08:46:33 +00:00:     at Timeout._onTimeout (/root/projects/backend-magang/src/controllers/reportController.js:25:13)
+2026-02-11 08:46:33 +00:00:     at listOnTimeout (node:internal/timers:581:17)
+2026-02-11 08:46:33 +00:00:     at process.processTimers (node:internal/timers:519:7)
+2026-02-11 09:00:16 +00:00: Create report error: Query read timeout
+2026-02-11 09:00:21 +00:00: Create report error: Query read timeout
+2026-02-11 09:00:27 +00:00: Create report error: Query read timeout
+2026-02-11 09:00:49 +00:00: Create report error: Query read timeout
+2026-02-11 09:02:07 +00:00: Unexpected PostgreSQL pool error: Connection terminated unexpectedly
+2026-02-11 09:12:16 +00:00: Create report error: Query read timeout
+2026-02-11 09:12:19 +00:00: Create report error: Query read timeout
+2026-02-11 09:12:22 +00:00: Create report error: Query read timeout
+2026-02-11 09:12:23 +00:00: Create report error: Query read timeout
+2026-02-11 09:24:19 +00:00: Unexpected PostgreSQL pool error: terminating connection due to administrator command
+2026-02-11 09:24:19 +00:00: Unexpected PostgreSQL pool error: terminating connection due to administrator command
+2026-02-11 09:24:19 +00:00: Unexpected PostgreSQL pool error: terminating connection due to administrator command

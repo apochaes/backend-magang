@@ -1,191 +1,171 @@
 const { minioClient, BUCKET_NAME } = require("../services/minio");
 const pool = require("../services/db");
-const { redisClient, safeRedisCommand } = require("../services/redis");
+const { safeRedisCommand } = require("../services/redis");
 const { Readable } = require("stream");
 
-// POST /reports
+/* =====================================================
+   CREATE REPORT
+===================================================== */
 exports.createReport = async (req, res) => {
   let reportId = null;
   const uploadedFiles = [];
 
-  try {
+  const mainOperation = async () => {
     const { title, description, category, location } = req.body;
 
-    // Validation
+    // ===== VALIDATION =====
     if (!title || !description || !category) {
-      return res.status(400).json({ message: "Field tidak lengkap" });
+      throw { status: 400, message: "Field tidak lengkap" };
     }
 
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "Minimal 1 foto diupload" });
+      throw { status: 400, message: "Minimal 1 foto diupload" };
     }
 
-    // Set a timeout for the entire operation
-    const operationTimeout = setTimeout(() => {
-      throw new Error("Operation timeout");
-    }, 25000); // 25 seconds (sebelum nginx/app timeout)
-
-    // STEP 1: Insert report FIRST and COMMIT immediately
-    // This ensures report exists before we try to insert photos
+    /* =============================
+       STEP 1 - INSERT REPORT
+    ============================== */
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
-      const reportResult = await client.query(
+      const result = await client.query(
         `INSERT INTO reports (title, description, category, location)
          VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [title, description, category, location || null],
+        [title, description, category, location || null]
       );
 
-      reportId = reportResult.rows[0].id;
+      reportId = result.rows[0].id;
 
-      // COMMIT report immediately so it exists for foreign key
       await client.query("COMMIT");
-      console.log(`Report ${reportId} created and committed`);
-    } catch (dbError) {
+      console.log(`Report ${reportId} created`);
+    } catch (err) {
       await client.query("ROLLBACK");
-      throw dbError;
+      throw err;
     } finally {
       client.release();
     }
 
-    // STEP 2: Upload photos to MinIO in PARALLEL
+    /* =============================
+       STEP 2 - UPLOAD TO MINIO
+    ============================== */
     const uploadPromises = req.files.map(async (file) => {
-      const objectName = `${Date.now()}-${process.pid}-${Math.round(Math.random() * 1e9)}-${file.originalname}`;
+      const objectName = `${Date.now()}-${process.pid}-${Math.round(
+        Math.random() * 1e9
+      )}-${file.originalname}`;
 
-      try {
-        // Convert buffer to stream for MinIO
-        const bufferStream = Readable.from(file.buffer);
+      const stream = Readable.from(file.buffer);
 
-        // Upload to MinIO
-        await minioClient.putObject(
-          BUCKET_NAME,
-          objectName,
-          bufferStream,
-          file.size,
-          {
-            "Content-Type": file.mimetype,
-            "X-Upload-Date": new Date().toISOString(),
-          },
-        );
+      await minioClient.putObject(
+        BUCKET_NAME,
+        objectName,
+        stream,
+        file.size,
+        {
+          "Content-Type": file.mimetype,
+        }
+      );
 
-        console.log(`Uploaded to MinIO: ${objectName}`);
-        uploadedFiles.push(objectName);
-
-        return { objectName, success: true };
-      } catch (err) {
-        console.error(
-          `Failed to upload ${file.originalname} to MinIO:`,
-          err.message,
-        );
-        return {
-          objectName: file.originalname,
-          success: false,
-          error: err.message,
-        };
-      }
+      uploadedFiles.push(objectName);
+      console.log(`Uploaded: ${objectName}`);
+      return objectName;
     });
 
-    const uploadResults = await Promise.allSettled(uploadPromises);
+    await Promise.all(uploadPromises);
 
-    // Check if any uploads failed
-    const failedUploads = uploadResults.filter(
-      (r) => r.status === "rejected" || !r.value?.success,
+    /* =============================
+       STEP 3 - INSERT PHOTO RECORD
+    ============================== */
+    const insertPhotoPromises = uploadedFiles.map((objectName) =>
+      pool.query(
+        `INSERT INTO report_photos (report_id, photo_url)
+         VALUES ($1, $2)`,
+        [reportId, objectName]
+      )
     );
-    if (failedUploads.length > 0) {
-      console.error("Some uploads failed:", failedUploads);
-      // Continue anyway - at least some photos might have succeeded
-    }
 
-    // STEP 3: Insert photo records to database
-    // Now that report is committed, foreign key will work
-    const photoInsertPromises = uploadedFiles.map(async (objectName) => {
-      try {
-        await pool.query(
-          `INSERT INTO report_photos (report_id, photo_url)
-          VALUES ($1, $2)`,
-          [reportId, objectName],
-        );
-        console.log(`DB record created for: ${objectName}`);
-        return { objectName, success: true };
-      } catch (err) {
-        console.error(
-          `Failed to insert photo record for ${objectName}:`,
-          err.message,
-        );
-        return { objectName, success: false, error: err.message };
-      }
-    });
+    await Promise.all(insertPhotoPromises);
 
-    await Promise.allSettled(photoInsertPromises);
+    /* =============================
+       STEP 4 - INVALIDATE CACHE
+    ============================== */
+    await safeRedisCommand("del", "reports:1:10").catch(() => {});
 
-    clearTimeout(operationTimeout);
+    return {
+      status: 201,
+      data: {
+        message: "Report created",
+        report_id: reportId,
+        total_photos: uploadedFiles.length,
+        photos: uploadedFiles,
+      },
+    };
+  };
 
-    // Invalidate cache - only specific keys
-    await safeRedisCommand("del", "reports:1:10");
+  try {
+    // 25s global timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Operation timeout")), 25000)
+    );
 
-    return res.status(201).json({
-      message: "Report created",
-      report_id: reportId,
-      total_photos: uploadedFiles.length,
-      photos: uploadedFiles,
-    });
+    const result = await Promise.race([
+      mainOperation(),
+      timeoutPromise,
+    ]);
+
+    return res.status(result.status).json(result.data);
   } catch (error) {
     console.error("Create report error:", error.message);
 
-    // Cleanup: If we created a report but upload failed, delete the report
+    // ===== CLEANUP DATABASE =====
     if (reportId) {
-      try {
-        await pool.query("DELETE FROM reports WHERE id = $1", [reportId]);
-        console.log(`Cleaned up report ${reportId} due to error`);
-      } catch (cleanupErr) {
-        console.error("Failed to cleanup report:", cleanupErr.message);
-      }
+      await pool
+        .query("DELETE FROM reports WHERE id = $1", [reportId])
+        .catch(() => {});
     }
 
-    // Cleanup: delete uploaded files from MinIO if transaction failed
+    // ===== CLEANUP MINIO =====
     if (uploadedFiles.length > 0) {
-      const cleanupPromises = uploadedFiles.map(async (objectName) => {
-        try {
-          await minioClient.removeObject(BUCKET_NAME, objectName);
-          console.log(`Cleaned up MinIO: ${objectName}`);
-        } catch (cleanupErr) {
-          console.error(`Failed to cleanup ${objectName}:`, cleanupErr.message);
-        }
-      });
-      await Promise.allSettled(cleanupPromises);
+      await Promise.allSettled(
+        uploadedFiles.map((obj) =>
+          minioClient.removeObject(BUCKET_NAME, obj)
+        )
+      );
     }
 
-    // Send appropriate error response
     if (error.message === "Operation timeout") {
-      return res
-        .status(504)
-        .json({ message: "Request timeout - operation took too long" });
+      return res.status(504).json({
+        message: "Request timeout - operation took too long",
+      });
     }
 
-    return res.status(500).json({
-      message: "Gagal membuat laporan",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    return res.status(error.status || 500).json({
+      message: error.message || "Gagal membuat laporan",
     });
   }
 };
 
-// GET /reports
+/* =====================================================
+   GET REPORTS
+===================================================== */
 exports.getReports = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
 
-    // Validate pagination params
     if (page < 1 || limit < 1 || limit > 100) {
-      return res.status(400).json({ message: "Invalid pagination parameters" });
+      return res
+        .status(400)
+        .json({ message: "Invalid pagination parameters" });
     }
 
+    const offset = (page - 1) * limit;
     const cacheKey = `reports:${page}:${limit}`;
 
-    // Try cache first with error handling
+    /* =============================
+       CHECK REDIS CACHE
+    ============================== */
     const cached = await safeRedisCommand("get", cacheKey);
     if (cached) {
       return res.json({
@@ -194,7 +174,9 @@ exports.getReports = async (req, res) => {
       });
     }
 
-    // Query database
+    /* =============================
+       QUERY DATABASE
+    ============================== */
     const [countResult, result] = await Promise.all([
       pool.query("SELECT COUNT(*) FROM reports"),
       pool.query(
@@ -216,7 +198,7 @@ exports.getReports = async (req, res) => {
         ORDER BY r.created_at DESC
         LIMIT $1 OFFSET $2
         `,
-        [limit, offset],
+        [limit, offset]
       ),
     ]);
 
@@ -230,10 +212,15 @@ exports.getReports = async (req, res) => {
       data: result.rows,
     };
 
-    // Cache the result (don't block response if caching fails)
-    safeRedisCommand("setEx", cacheKey, 60, JSON.stringify(responseData)).catch(
-      (err) => console.warn("Cache write failed:", err.message),
-    );
+    /* =============================
+       SAVE TO REDIS (NON BLOCKING)
+    ============================== */
+    safeRedisCommand(
+      "setEx",
+      cacheKey,
+      60,
+      JSON.stringify(responseData)
+    ).catch(() => {});
 
     return res.json({
       source: "database",
@@ -241,9 +228,14 @@ exports.getReports = async (req, res) => {
     });
   } catch (error) {
     console.error("Get reports error:", error.message);
+
     return res.status(500).json({
       message: "Gagal mengambil laporan",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : undefined,
     });
   }
 };
+
