@@ -109,12 +109,9 @@ exports.createReport = async (req, res) => {
       setTimeout(() => reject(new Error("Operation timeout")), 25000)
     );
 
-    const result = await Promise.race([
-      mainOperation(),
-      timeoutPromise,
-    ]);
+    const result = await Promise.race([mainOperation(), timeoutPromise]);
 
-    return res.status(result.status).json(result.data);
+    res.status(result.status).json(result.data);
   } catch (error) {
     console.error("Create report error:", error.message);
 
@@ -122,7 +119,9 @@ exports.createReport = async (req, res) => {
     if (reportId) {
       await pool
         .query("DELETE FROM reports WHERE id = $1", [reportId])
-        .catch(() => {});
+        .catch((err) => {
+          console.error("Cleanup DB error:", err.message);
+        });
     }
 
     // ===== CLEANUP MINIO =====
@@ -132,17 +131,27 @@ exports.createReport = async (req, res) => {
           minioClient.removeObject(BUCKET_NAME, obj)
         )
       );
+      console.log(`Cleaned up ${uploadedFiles.length} files from MinIO`);
     }
 
+    if (res.headersSent) {
+      console.error("Headers already sent, cannot send error response");
+      return;
+    }
+
+    // Send error response
     if (error.message === "Operation timeout") {
-      return res.status(504).json({
+      res.status(504).json({
         message: "Request timeout - operation took too long",
       });
+    } else {
+      res.status(error.status || 500).json({
+        message: error.message || "Gagal membuat laporan",
+        ...(process.env.NODE_ENV === "development" && {
+          error: error.stack,
+        }),
+      });
     }
-
-    return res.status(error.status || 500).json({
-      message: error.message || "Gagal membuat laporan",
-    });
   }
 };
 
@@ -215,12 +224,11 @@ exports.getReports = async (req, res) => {
     /* =============================
        SAVE TO REDIS (NON BLOCKING)
     ============================== */
-    safeRedisCommand(
-      "setEx",
-      cacheKey,
-      60,
-      JSON.stringify(responseData)
-    ).catch(() => {});
+    safeRedisCommand("setEx", cacheKey, 60, JSON.stringify(responseData)).catch(
+      (err) => {
+        console.error("Redis cache save error:", err.message);
+      }
+    );
 
     return res.json({
       source: "database",
@@ -229,13 +237,16 @@ exports.getReports = async (req, res) => {
   } catch (error) {
     console.error("Get reports error:", error.message);
 
+   if (res.headersSent) {
+      console.error("Headers already sent, cannot send error response");
+      return;
+    }
+
     return res.status(500).json({
       message: "Gagal mengambil laporan",
-      error:
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : undefined,
+      ...(process.env.NODE_ENV === "development" && {
+        error: error.message,
+      }),
     });
   }
 };
-
